@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #F7F8F3;
+    color: #293B38;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #293B38;
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Subtle peaceful scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #DCE5D5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A9BDA5;
+}
+
+/* Card presets for calm UI */
+.peaceful-card {
+  background-color: #FBFAF6;
+  border: 1px solid #E5E8DF;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(41, 59, 56, 0.03);
+  transition: all 200ms ease-in-out;
+}
+
+.peaceful-card:hover {
+  border-color: #DCE5D5;
+}
+
+.peaceful-card-sage {
+  background-color: #E9EDE2;
+  border: 1px solid #DCE5D5;
+  border-radius: 20px;
+}
+
+.peaceful-card-peach {
+  background-color: #FBF4EE;
+  border: 1px solid #F3D8C8;
+  border-radius: 20px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
