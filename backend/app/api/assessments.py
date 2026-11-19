@@ -80,6 +80,22 @@ def get_assessment_questions():
         }
     }
 
+def format_assessment_item(record: Assessment) -> AssessmentOut:
+    """Helper to convert Assessment DB model to full AssessmentOut schema with interpretation."""
+    out = AssessmentOut.model_validate(record)
+    out.score = record.total_score
+    if record.assessment_type == "PHQ-9":
+        _, rec = interpret_phq9(record.total_score)
+        out.recommendation = rec
+        out.interpretation = rec
+        if record.flagged_safety or (record.answers and len(record.answers) >= 9 and record.answers[8] > 0):
+            out.safety_info = evaluate_phq9_safety(record.answers[8] if record.answers and len(record.answers) >= 9 else 1)
+    else:
+        _, rec = interpret_gad7(record.total_score)
+        out.recommendation = rec
+        out.interpretation = rec
+    return out
+
 @router.post("/phq9", response_model=AssessmentOut, status_code=status.HTTP_201_CREATED)
 def submit_phq9(
     payload: AssessmentCreate,
@@ -112,7 +128,9 @@ def submit_phq9(
     db.refresh(record)
 
     out = AssessmentOut.model_validate(record)
+    out.score = total
     out.recommendation = recommendation
+    out.interpretation = recommendation
     if flagged:
         out.safety_info = safety_eval
     return out
@@ -144,7 +162,9 @@ def submit_gad7(
     db.refresh(record)
 
     out = AssessmentOut.model_validate(record)
+    out.score = total
     out.recommendation = recommendation
+    out.interpretation = recommendation
     return out
 
 @router.get("/history", response_model=List[AssessmentOut])
@@ -157,15 +177,7 @@ def get_assessment_history(
         Assessment.user_id == current_user.id
     ).order_by(Assessment.completed_at.desc()).all()
     
-    results = []
-    for r in records:
-        item = AssessmentOut.model_validate(r)
-        if r.assessment_type == "PHQ-9":
-            _, item.recommendation = interpret_phq9(r.total_score)
-        else:
-            _, item.recommendation = interpret_gad7(r.total_score)
-        results.append(item)
-    return results
+    return [format_assessment_item(r) for r in records]
 
 @router.get("/latest")
 def get_latest_assessments(
@@ -184,6 +196,6 @@ def get_latest_assessments(
     ).order_by(Assessment.completed_at.desc()).first()
 
     return {
-        "phq9": AssessmentOut.model_validate(latest_phq9) if latest_phq9 else None,
-        "gad7": AssessmentOut.model_validate(latest_gad7) if latest_gad7 else None
+        "phq9": format_assessment_item(latest_phq9) if latest_phq9 else None,
+        "gad7": format_assessment_item(latest_gad7) if latest_gad7 else None
     }

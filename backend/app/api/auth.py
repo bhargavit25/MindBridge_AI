@@ -30,6 +30,7 @@ def register_user(payload: UserRegister, db: Session = Depends(get_db)):
     )
     db.add(new_user)
     db.commit()
+    
     db.refresh(new_user)
 
     token = create_access_token(data={"sub": str(new_user.id), "role": new_user.role})

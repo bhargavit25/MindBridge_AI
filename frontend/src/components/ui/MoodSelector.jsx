@@ -1,11 +1,13 @@
 import React from 'react';
 
 export const MOOD_OPTIONS = [
-  { value: 'Very Low', label: 'Very Low', emoji: '🌧️', bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
-  { value: 'Low', label: 'Low', emoji: '⛅', bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
-  { value: 'Okay', label: 'Okay', emoji: '🌱', bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
-  { value: 'Good', label: 'Good', emoji: '🌿', bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
-  { value: 'Great', label: 'Great', emoji: '☀️', bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Very Happy', label: 'Very Happy', emoji: '😄', rating: 7, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Happy', label: 'Happy', emoji: '🙂', rating: 6, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Neutral', label: 'Neutral', emoji: '😐', rating: 5, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Anxious', label: 'Anxious', emoji: '😰', rating: 4, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Stressed', label: 'Stressed', emoji: '😫', rating: 3, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Sad', label: 'Sad', emoji: '😢', rating: 2, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
+  { value: 'Very Sad', label: 'Very Sad', emoji: '😭', rating: 1, bg: 'hover:bg-[#E9EDE2]', selectedBg: 'bg-[#DCE5D5] border-[#294A40] text-[#294A40]' },
 ];
 
 export const MoodSelector = ({ selectedMood, onSelect, className = '', disabled = false }) => {

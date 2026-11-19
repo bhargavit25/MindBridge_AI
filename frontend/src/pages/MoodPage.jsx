@@ -11,28 +11,31 @@ import {
   TrendingUp,
   X
 } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
 const MOODS_CONFIG = [
-  { label: 'Very Low', emoji: '🌧️', color: '#E4ECF2' },
-  { label: 'Low', emoji: '⛅', color: '#E9E5F2' },
-  { label: 'Okay', emoji: '🌱', color: '#E9EDE2' },
-  { label: 'Good', emoji: '🌿', color: '#DCE5D5' },
-  { label: 'Great', emoji: '☀️', color: '#F3D8C8' },
+  { label: 'Very Happy', rating: 7, emoji: '😄', color: '#C8DEC4' },
+  { label: 'Happy', rating: 6, emoji: '🙂', color: '#DCE5D5' },
+  { label: 'Neutral', rating: 5, emoji: '😐', color: '#E9EDE2' },
+  { label: 'Anxious', rating: 4, emoji: '😰', color: '#F9DFCE' },
+  { label: 'Stressed', rating: 3, emoji: '😫', color: '#F3CFC0' },
+  { label: 'Sad', rating: 2, emoji: '😢', color: '#D9E5EE' },
+  { label: 'Very Sad', rating: 1, emoji: '😭', color: '#C6D5E5' },
 ];
 
 export const MoodPage = () => {
   const [moods, setMoods] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMood, setSelectedMood] = useState('Okay');
+  const [selectedMood, setSelectedMood] = useState('Neutral');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editNote, setEditNote] = useState('');
-  const [editMood, setEditMood] = useState('');
+  const [editMood, setEditMood] = useState('Neutral');
   const [notification, setNotification] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const fetchMoods = async () => {
     try {
@@ -52,6 +55,11 @@ export const MoodPage = () => {
 
   const handleRecord = async (e) => {
     e.preventDefault();
+    if (!selectedMood) {
+      setErrorMessage('Please select how you are feeling.');
+      return;
+    }
+    setErrorMessage('');
     setSubmitting(true);
     try {
       await api.recordMood(selectedMood, note);
@@ -60,7 +68,8 @@ export const MoodPage = () => {
       setTimeout(() => setNotification(''), 4000);
       fetchMoods();
     } catch (err) {
-      alert(err.message || 'Error recording mood');
+      setErrorMessage(err.message || 'Error recording mood.');
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setSubmitting(false);
     }
@@ -71,8 +80,11 @@ export const MoodPage = () => {
     try {
       await api.deleteMood(id);
       setMoods((prev) => prev.filter((m) => m.id !== id));
+      setNotification('Mood entry removed.');
+      setTimeout(() => setNotification(''), 3000);
     } catch (err) {
-      alert(err.message || 'Error deleting mood');
+      setErrorMessage(err.message || 'Error deleting mood.');
+      setTimeout(() => setErrorMessage(''), 5000);
     }
   };
 
@@ -84,6 +96,11 @@ export const MoodPage = () => {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    if (!editMood) {
+      setErrorMessage('Please choose a valid feeling.');
+      return;
+    }
+    setErrorMessage('');
     try {
       const updated = await api.updateMood(editingEntry.id, { mood: editMood, note: editNote });
       setMoods((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
@@ -91,14 +108,17 @@ export const MoodPage = () => {
       setNotification('Mood entry updated.');
       setTimeout(() => setNotification(''), 3000);
     } catch (err) {
-      alert(err.message || 'Error updating mood');
+      setErrorMessage(err.message || 'Error updating mood.');
+      setTimeout(() => setErrorMessage(''), 5000);
     }
   };
 
   // Aggregate mood distribution for calm chart
   const moodCounts = {};
   moods.forEach((m) => {
-    moodCounts[m.mood] = (moodCounts[m.mood] || 0) + 1;
+    const matched = MOODS_CONFIG.find((c) => c.label.toLowerCase() === (m.mood || '').toLowerCase());
+    const key = matched ? matched.label : m.mood;
+    moodCounts[key] = (moodCounts[key] || 0) + 1;
   });
 
   const chartData = MOODS_CONFIG.map((cfg) => ({
@@ -106,6 +126,22 @@ export const MoodPage = () => {
     count: moodCounts[cfg.label] || 0,
     color: cfg.color
   }));
+
+  // 14-day interactive emotional trajectory line chart (Recharts)
+  const trajectoryData = [...moods]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .slice(-14)
+    .map((m) => {
+      const cfg = MOODS_CONFIG.find((c) => c.label.toLowerCase() === (m.mood || '').toLowerCase()) || { rating: m.rating || 5, label: m.mood };
+      return {
+        id: m.id,
+        date: new Date(m.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        fullDate: new Date(m.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        rating: cfg.rating || m.rating || 5,
+        mood: cfg.label || m.mood,
+        note: m.note || ''
+      };
+    });
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto font-sans text-[#293B38] pb-12">
@@ -124,6 +160,13 @@ export const MoodPage = () => {
         <div className="p-3.5 rounded-2xl bg-[#E9EDE2] border border-[#DCE5D5] text-[#294A40] text-xs font-medium flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-[#294A40]" />
           <span>{notification}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -177,6 +220,52 @@ export const MoodPage = () => {
         </form>
       </div>
 
+      {/* 14-Day Interactive Emotional Trajectory Line Chart */}
+      {trajectoryData.length > 1 && (
+        <div className="p-6 sm:p-7 rounded-3xl bg-[#FBFAF6] border border-[#E5E8DF] shadow-[0_2px_10px_rgba(41,59,56,0.03)] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#294A40]" />
+              <h2 className="font-semibold text-sm text-[#293B38]">14-Day Emotional Trajectory</h2>
+            </div>
+            <span className="text-xs text-[#78817D]">Mood Progression Scale (1 to 7)</span>
+          </div>
+
+          <div className="h-52 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trajectoryData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E8DF" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#78817D' }} axisLine={false} tickLine={false} />
+                <YAxis 
+                  domain={[1, 7]} 
+                  ticks={[1, 2, 3, 4, 5, 6, 7]} 
+                  tickFormatter={(val) => {
+                    const tickMap = { 7: 'Very Happy', 6: 'Happy', 5: 'Neutral', 4: 'Anxious', 3: 'Stressed', 2: 'Sad', 1: 'Very Sad' };
+                    return tickMap[val] || val;
+                  }}
+                  tick={{ fontSize: 10, fill: '#78817D' }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                />
+                <Tooltip
+                  formatter={(val, name, item) => [`${item.payload.mood} (Rating: ${val}/7)`, 'Feeling']}
+                  labelFormatter={(lbl, items) => items?.[0]?.payload?.fullDate || lbl}
+                  contentStyle={{ backgroundColor: '#FBFAF6', borderRadius: '16px', border: '1px solid #E5E8DF', fontSize: '11px', color: '#293B38' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="rating" 
+                  stroke="#294A40" 
+                  strokeWidth={2.5} 
+                  dot={{ r: 4, fill: '#294A40' }} 
+                  activeDot={{ r: 6, fill: '#DCE5D5', stroke: '#294A40' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       {/* Mood Distribution Simple Chart */}
       {moods.length > 0 && (
         <div className="p-6 sm:p-7 rounded-3xl bg-[#FBFAF6] border border-[#E5E8DF] shadow-[0_2px_10px_rgba(41,59,56,0.03)] space-y-4">
@@ -191,7 +280,7 @@ export const MoodPage = () => {
           <div className="h-44 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="mood" tick={{ fontSize: 11, fill: '#78817D' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="mood" tick={{ fontSize: 10, fill: '#78817D' }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#78817D' }} axisLine={false} tickLine={false} />
                 <Tooltip
                   formatter={(val) => [`${val} check-ins`, 'Count']}
@@ -227,7 +316,7 @@ export const MoodPage = () => {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-lg">
-                    {MOODS_CONFIG.find((c) => c.label === m.mood)?.emoji || '🌱'}
+                    {MOODS_CONFIG.find((c) => c.label.toLowerCase() === (m.mood || '').toLowerCase())?.emoji || '🌱'}
                   </span>
                   <div>
                     <div className="flex items-center gap-2">

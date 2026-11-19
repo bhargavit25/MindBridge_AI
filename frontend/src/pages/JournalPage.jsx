@@ -25,11 +25,11 @@ export const JournalPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [moodTag, setMoodTag] = useState('Okay');
+  const [moodTag, setMoodTag] = useState('Neutral');
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
-  const moodTags = ['Great', 'Good', 'Okay', 'Low', 'Very Low'];
+  const moodTags = ['Very Happy', 'Happy', 'Neutral', 'Anxious', 'Stressed', 'Sad', 'Very Sad'];
 
   const fetchJournals = async () => {
     try {

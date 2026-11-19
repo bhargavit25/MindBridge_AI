@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.core.database import engine, Base
 import app.models  # Ensures all SQLAlchemy models are registered
@@ -41,9 +43,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Centralized error handler
+# Centralized error handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        field = " -> ".join(str(loc) for loc in err.get("loc", []))
+        errors.append(f"{field}: {err.get('msg', 'Invalid value')}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "; ".join(errors) if errors else "Invalid request payload."}
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    print(f"[ERROR] Unhandled server error: {exc}")
     return JSONResponse(
         status_code=500,
         content={"detail": "An unexpected server error occurred. Please try again later."}

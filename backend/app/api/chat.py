@@ -24,7 +24,7 @@ def get_starters():
     return {"starters": CONVERSATION_STARTERS}
 
 @router.post("", response_model=ChatMessageOut)
-async def send_chat_message(
+def send_chat_message(
     payload: ChatPrompt,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -56,6 +56,16 @@ async def send_chat_message(
         db.commit()
         db.refresh(session)
 
+    # Fetch recent past messages for conversation context (up to last 6 messages)
+    past_messages = db.query(ChatMessage).filter(
+        ChatMessage.session_id == session.id
+    ).order_by(ChatMessage.created_at.asc()).all()
+
+    chat_history = [
+        {"role": m.role, "content": m.content}
+        for m in past_messages[-6:]
+    ]
+
     # Save user message
     user_msg_record = ChatMessage(
         session_id=session.id,
@@ -65,8 +75,8 @@ async def send_chat_message(
     db.add(user_msg_record)
     db.commit()
 
-    # Generate RAG response
-    rag_result = await rag_service.generate_response(user_msg_record.content)
+    # Generate RAG response with conversation history
+    rag_result = rag_service.generate_response_sync(clean_msg, chat_history=chat_history)
 
     # Save assistant message
     ai_msg_record = ChatMessage(

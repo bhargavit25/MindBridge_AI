@@ -42,10 +42,12 @@ class AssessmentOut(BaseModel):
     assessment_type: str
     answers: List[int]
     total_score: int
+    score: Optional[int] = None
     severity: str
     flagged_safety: bool
     completed_at: datetime
     recommendation: Optional[str] = None
+    interpretation: Optional[str] = None
     safety_info: Optional[Dict[str, Any]] = None
 
     class Config:
@@ -55,16 +57,19 @@ class AssessmentOut(BaseModel):
 class MoodCreate(BaseModel):
     mood: str
     note: Optional[str] = None
+    rating: Optional[int] = None
 
 class MoodUpdate(BaseModel):
     mood: Optional[str] = None
     note: Optional[str] = None
+    rating: Optional[int] = None
 
 class MoodOut(BaseModel):
     id: int
     user_id: int
     mood: str
     note: Optional[str] = None
+    rating: Optional[int] = None
     created_at: datetime
 
     class Config:

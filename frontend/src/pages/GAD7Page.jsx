@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { 
@@ -37,8 +37,26 @@ export const GAD7Page = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState(Array(7).fill(null));
   const [submitting, setSubmitting] = useState(false);
+  const [loadingLatest, setLoadingLatest] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        setLoadingLatest(true);
+        const data = await api.getLatestAssessments();
+        if (data?.gad7) {
+          setResult(data.gad7);
+        }
+      } catch (err) {
+        console.warn('Could not load previous GAD-7:', err.message);
+      } finally {
+        setLoadingLatest(false);
+      }
+    };
+    fetchLatest();
+  }, []);
 
   const currentQuestionText = GAD7_QUESTIONS[currentIndex];
   const selectedOption = answers[currentIndex];
@@ -101,6 +119,15 @@ export const GAD7Page = () => {
     setResult(null);
     setError('');
   };
+
+  if (loadingLatest) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-6 h-6 text-[#294A40] animate-spin" />
+        <p className="text-xs text-[#78817D]">Loading anxiety screening...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex flex-col justify-center items-center py-6 px-4 font-sans text-[#293B38]">
@@ -251,7 +278,7 @@ export const GAD7Page = () => {
                 Total GAD-7 Score
               </div>
               <div className="text-3xl font-bold text-[#294A40]">
-                {result.score} <span className="text-sm font-normal text-[#78817D]">/ 21</span>
+                {result.total_score ?? result.score ?? 0} <span className="text-sm font-normal text-[#78817D]">/ 21</span>
               </div>
               <div className="text-sm font-semibold text-[#293B38]">
                 Severity: {result.severity}
@@ -261,11 +288,19 @@ export const GAD7Page = () => {
             {/* Supportive Interpretation */}
             <div className="p-4 rounded-2xl bg-[#FBFAF6] border border-[#E5E8DF] space-y-2">
               <h4 className="text-xs font-semibold text-[#293B38]">
-                Supportive Reflection:
+                Supportive Reflection & Guidance:
               </h4>
               <p className="text-xs text-[#78817D] leading-relaxed">
-                {result.interpretation || "Anxiety is a common response to academic pressures and transitions. Self-check-ins give you space to acknowledge your feelings with compassion."}
+                {result.recommendation || result.interpretation || "Anxiety is a common response to academic pressures and transitions. Self-check-ins give you space to acknowledge your feelings with compassion."}
               </p>
+            </div>
+
+            {/* Non-Diagnostic Disclaimer */}
+            <div className="p-3.5 rounded-2xl bg-[#F7F8F3] border border-[#E5E8DF] text-[11px] text-[#78817D] flex items-start gap-2 leading-relaxed">
+              <AlertCircle className="w-4 h-4 text-[#294A40] shrink-0 mt-0.5" />
+              <span>
+                <strong>Important Note:</strong> Screening scores are reflective wellness tools and do not represent a clinical or medical diagnosis. If anxiety impacts your daily activities, reaching out to a campus counsellor is recommended.
+              </span>
             </div>
 
             {/* Recommended Next Steps */}

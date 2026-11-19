@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { 
@@ -42,8 +42,26 @@ export const PHQ9Page = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState(Array(9).fill(null));
   const [submitting, setSubmitting] = useState(false);
+  const [loadingLatest, setLoadingLatest] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        setLoadingLatest(true);
+        const data = await api.getLatestAssessments();
+        if (data?.phq9) {
+          setResult(data.phq9);
+        }
+      } catch (err) {
+        console.warn('Could not load previous PHQ-9:', err.message);
+      } finally {
+        setLoadingLatest(false);
+      }
+    };
+    fetchLatest();
+  }, []);
 
   const currentQuestionText = PHQ9_QUESTIONS[currentIndex];
   const selectedOption = answers[currentIndex];
@@ -106,6 +124,15 @@ export const PHQ9Page = () => {
     setResult(null);
     setError('');
   };
+
+  if (loadingLatest) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-6 h-6 text-[#294A40] animate-spin" />
+        <p className="text-xs text-[#78817D]">Loading screening assessment...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex flex-col justify-center items-center py-6 px-4 font-sans text-[#293B38]">
@@ -256,7 +283,7 @@ export const PHQ9Page = () => {
                 Total PHQ-9 Score
               </div>
               <div className="text-3xl font-bold text-[#294A40]">
-                {result.score} <span className="text-sm font-normal text-[#78817D]">/ 27</span>
+                {result.total_score ?? result.score ?? 0} <span className="text-sm font-normal text-[#78817D]">/ 27</span>
               </div>
               <div className="text-sm font-semibold text-[#293B38]">
                 Severity: {result.severity}
@@ -266,15 +293,23 @@ export const PHQ9Page = () => {
             {/* Supportive Interpretation */}
             <div className="p-4 rounded-2xl bg-[#FBFAF6] border border-[#E5E8DF] space-y-2">
               <h4 className="text-xs font-semibold text-[#293B38]">
-                Supportive Reflection:
+                Supportive Reflection & Guidance:
               </h4>
               <p className="text-xs text-[#78817D] leading-relaxed">
-                {result.interpretation || "These results reflect how you've felt over the past two weeks. Screening tools offer gentle insight into your wellness and are not a medical diagnosis."}
+                {result.recommendation || result.interpretation || "These results reflect how you've felt over the past two weeks. Screening tools offer gentle insight into your wellness and are not a medical diagnosis."}
               </p>
             </div>
 
+            {/* Non-Diagnostic Disclaimer */}
+            <div className="p-3.5 rounded-2xl bg-[#F7F8F3] border border-[#E5E8DF] text-[11px] text-[#78817D] flex items-start gap-2 leading-relaxed">
+              <AlertCircle className="w-4 h-4 text-[#294A40] shrink-0 mt-0.5" />
+              <span>
+                <strong>Important Note:</strong> Screening scores are self-assessment indicators and do not constitute a clinical or medical diagnosis. For personalized care, we encourage connecting with campus psychological services or a healthcare professional.
+              </span>
+            </div>
+
             {/* Crisis safety alert if Question 9 indicated suicidal ideation */}
-            {answers[8] > 0 && (
+            {(result.flagged_safety || answers[8] > 0 || (result.answers && result.answers[8] > 0)) && (
               <div className="p-4 rounded-2xl bg-[#FBF4EE] border border-[#F3D8C8] space-y-2">
                 <div className="flex items-center gap-2 text-[#294A40] text-xs font-semibold">
                   <ShieldAlert className="w-4 h-4 text-[#294A40]" />
